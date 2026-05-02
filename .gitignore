@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+path/
+.env
+.venv
+env/
+
+# Media Files (Don't push large videos/audio to GitHub)
+*.mp4
+*.wav
+*.mp3
+*.mkv
+
+# Project Outputs
+output.json
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
