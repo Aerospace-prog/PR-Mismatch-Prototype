@@ -18,6 +18,7 @@ env/
 
 # Project Outputs
 output.json
+frames/
 
 # IDEs
 .vscode/

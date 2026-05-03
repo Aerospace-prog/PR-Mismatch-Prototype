@@ -1,15 +1,15 @@
 #  Lightweight Audio-Subtitle Mismatch Detection Tool
 
 > **Planet Read × C4GT (Code for Good Tech)**
-> Phase 1 — Transcription Pipeline Prototype
+> Phase 2 — Transcription & OCR Pipeline Prototype
 
 ---
 
 ##  Project Overview
 
-This project is a **proof-of-concept AI pipeline** that extracts audio from video files, transcribes the speech using OpenAI's Whisper, and outputs timestamped text segments as structured JSON.
+This project is a **proof-of-concept AI pipeline** that extracts audio from video files, transcribes the speech using OpenAI's Whisper, extracts subtitle text via Tesseract OCR, and outputs timestamped text segments as structured JSON.
 
-It is the **first phase** of a larger system that will automatically detect mismatches between spoken audio and on-screen subtitles — helping accessibility teams at **Planet Read** reduce manual quality-assurance effort.
+It is the **second phase** of a larger system that will automatically detect mismatches between spoken audio and on-screen subtitles — helping accessibility teams at **Planet Read** reduce manual quality-assurance effort.
 
 ---
 
@@ -30,33 +30,26 @@ It is the **first phase** of a larger system that will automatically detect mism
 Currently, this verification is done **manually** — a slow, error-prone process. This tool aims to **automate mismatch detection** by:
 
 1. Transcribing the spoken audio
-2. Comparing it against existing subtitles
-3. Flagging segments where they diverge
+2. Extracting hardcoded subtitles via OCR
+3. Comparing the two and flagging segments where they diverge
 
 ---
 
-## Pipeline
+## ⚙️ Pipeline
 
 ```text
 Video (.mp4)
       │
-      ▼
-┌─────────────────────┐
-│  Extract Audio       │   extract_audio.py
-│  (FFmpeg → .wav)     │   mono, 16 kHz
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Transcribe Audio    │   transcribe.py
-│  (Whisper "base")    │   timestamped segments
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Save Output         │   pipeline.py
-│  (JSON)              │   structured results
-└─────────────────────┘
+      ├──▶ Extract Audio (FFmpeg → .wav) ──▶ Transcribe (Whisper) ─┐
+      │                                                            │
+      │                                                       Timestamps
+      │                                                            │
+      │                                                            ▼
+      └──▶ Extract Frame (OpenCV) ───────▶ Crop & OCR ─────────────┤
+                                                                   │
+                                                                   ▼
+                                                            Save JSON Output
+                                                        (Audio Text + Subtitle Text)
 ```
 
 ---
@@ -167,24 +160,41 @@ The similarity demo also prints:
 ```text
 pr-mismatch-prototype/
 │
+├── frame_extractor.py  # OpenCV frame extraction
+├── ocr.py              # Subtitle cropping & OCR
 ├── extract_audio.py    # FFmpeg audio extraction
 ├── transcribe.py       # Whisper transcription
 ├── pipeline.py         # Main orchestrator + similarity demo
 ├── requirements.txt    # Python dependencies
 ├── README.md           # This file
-├── sample.mp4          # Your input video (not included)
+├── youtube_sample.mp4  # Your input video (not included)
 └── output.json         # Generated output
 ```
 
 ---
 
+##  Phase 2: OCR Integration
+
+This phase extends the pipeline by capturing subtitles hardcoded into the video frames:
+
+1. **Frame Extraction**: Extracts a video frame precisely at the midpoint of each Whisper transcription segment.
+2. **Subtitle Region Cropping**: Crops the bottom 25% of the frame, assuming this is where subtitles are located.
+3. **OCR**: Uses Tesseract OCR to read text from the cropped area, converting image to text.
+
+### Limitations
+
+* **OCR Accuracy**: Depends heavily on subtitle clarity, background contrast, and font.
+* **No Mismatch Scoring**: This phase extracts both audio text and subtitle text but doesn't implement advanced mismatch scoring yet.
+* **Language Support**: Currently only English (`eng`) is tested. Extending to Hindi/Kannada will require adding additional Tesseract language packs.
+
+---
+
 ##  Future Work
 
-This prototype is **Phase 1**. Planned enhancements include:
+This prototype is currently at **Phase 2**. Planned enhancements include:
 
 | Phase   | Feature                              | Description                                                       |
 | ------- | ------------------------------------ | ----------------------------------------------------------------- |
-| Phase 2 | **OCR Subtitle Extraction**          | Extract burned-in subtitles from video frames using Tesseract OCR  |
 | Phase 3 | **Mismatch Detection**               | Align and compare transcribed audio against extracted subtitles    |
 | Phase 4 | **HTML Report Generation**           | Generate visual reports highlighting mismatched segments           |
 | Phase 5 | **Batch Processing & Dashboard**     | Process multiple videos and provide a web-based review interface   |

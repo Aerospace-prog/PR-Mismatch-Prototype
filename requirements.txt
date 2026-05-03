@@ -1,3 +1,6 @@
 openai-whisper
 ffmpeg-python
 rapidfuzz
+opencv-python
+pytesseract
+Pillow

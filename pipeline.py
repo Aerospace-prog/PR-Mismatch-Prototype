@@ -16,6 +16,8 @@ import sys
 
 from extract_audio import extract_audio
 from transcribe import transcribe_audio
+from frame_extractor import extract_frame
+from ocr import extract_subtitle_text
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +82,7 @@ def run_pipeline(
     """
     print("=" * 60)
     print("  Planet Read — Audio-Subtitle Mismatch Detection")
-    print("  Phase 1: Transcription Pipeline")
+    print("  Phase 2: Transcription & OCR Pipeline")
     print("=" * 60)
 
     # Step 1 — Extract audio
@@ -89,16 +91,49 @@ def run_pipeline(
 
     # Step 2 — Transcribe
     print("\n▶ STEP 2: Whisper Transcription")
-    segments = transcribe_audio(audio_path, model_name=model_name)
+    whisper_segments = transcribe_audio(audio_path, model_name=model_name)
 
-    # Step 3 — Save JSON output
-    print("\n▶ STEP 3: Saving Output")
+    # Step 3 — OCR Subtitle Extraction
+    print("\n▶ STEP 3: OCR Subtitle Extraction")
+    os.makedirs("frames", exist_ok=True)
+    final_segments = []
+    
+    for i, seg in enumerate(whisper_segments):
+        start = seg["start"]
+        end = seg["end"]
+        audio_text = seg["text"]
+        
+        # Calculate midpoint
+        mid = (start + end) / 2
+        
+        # Extract frame
+        frame_path = f"frames/frame_{i}.jpg"
+        extracted = extract_frame(video_path, mid, frame_path)
+        
+        # Run OCR
+        subtitle_text = ""
+        if extracted:
+            subtitle_text = extract_subtitle_text(frame_path)
+            # Replace newlines with spaces for clean JSON
+            subtitle_text = " ".join(subtitle_text.split())
+        
+        final_segments.append({
+            "start": start,
+            "end": end,
+            "audio_text": audio_text,
+            "subtitle_text": subtitle_text
+        })
+        
+        print(f"  [{start:.2f} → {end:.2f}] Audio: '{audio_text}' | Subtitle: '{subtitle_text}'")
+
+    # Step 4 — Save JSON output
+    print("\n▶ STEP 4: Saving Output")
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(segments, f, indent=2, ensure_ascii=False)
+        json.dump(final_segments, f, indent=2, ensure_ascii=False)
     print(f"[OK] Results saved to: {output_path}")
 
-    # Step 4 — Optional similarity demo
-    print("\n▶ STEP 4: Similarity Demo")
+    # Step 5 — Optional similarity demo
+    print("\n▶ STEP 5: Similarity Demo")
     similarity_check(
         text_a="Hello everyone welcome to the session",
         text_b="Hello everyone, welcome to the sesion",  # intentional typo
@@ -107,7 +142,7 @@ def run_pipeline(
     # Summary
     print("\n" + "=" * 60)
     print(f"   Pipeline complete.")
-    print(f"   Segments: {len(segments)}")
+    print(f"   Segments: {len(final_segments)}")
     print(f"   Output:   {os.path.abspath(output_path)}")
     print("=" * 60)
 
